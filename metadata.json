@@ -1,0 +1,6 @@
+{
+  "name": "Gestão Clínica ABA",
+  "description": "Aplicativo de gestão clínica para Análise do Comportamento Aplicada (ABA) com suporte a múltiplos perfis de clínica, acompanhamento terapêutico, registro de treinos integrados e relatórios gerados por IA.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

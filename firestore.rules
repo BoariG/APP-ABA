@@ -1,0 +1,143 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // General validator for basic Map fields check
+    function isValidPatient(data) {
+      return data.keys().hasAll(['id', 'nome', 'dataNascimento'])
+        && data.id is string && data.id.size() <= 128
+        && data.nome is string && data.nome.size() <= 200
+        && data.dataNascimento is string;
+    }
+
+    function isValidPlan(data) {
+      return data.keys().hasAll(['patientId'])
+        && data.patientId is string && data.patientId.size() <= 128;
+    }
+
+    function isValidTeachingProgram(data) {
+      return data.keys().hasAll(['id', 'patientId', 'titulo'])
+        && data.id is string && data.id.size() <= 128
+        && data.patientId is string && data.patientId.size() <= 128
+        && data.titulo is string && data.titulo.size() <= 200;
+    }
+
+    function isValidAssistant(data) {
+      return data.keys().hasAll(['id', 'nome', 'email'])
+        && data.id is string && data.id.size() <= 128
+        && data.nome is string && data.nome.size() <= 200
+        && data.email is string;
+    }
+
+    function isValidSessionLog(data) {
+      return data.keys().hasAll(['id', 'atId', 'patientId', 'data'])
+        && data.id is string && data.id.size() <= 128
+        && data.atId is string && data.atId.size() <= 128
+        && data.patientId is string && data.patientId.size() <= 128
+        && data.data is string;
+    }
+
+    function isValidAgendaEvent(data) {
+      return data.keys().hasAll(['id', 'atId', 'patientId', 'data'])
+        && data.id is string && data.id.size() <= 128
+        && data.atId is string && data.atId.size() <= 128
+        && data.patientId is string && data.patientId.size() <= 128
+        && data.data is string;
+    }
+
+    function isValidDocument(data) {
+      return data.keys().hasAll(['id', 'patientId', 'name', 'type'])
+        && data.id is string && data.id.size() <= 128
+        && data.patientId is string && data.patientId.size() <= 128
+        && data.name is string && data.name.size() <= 250;
+    }
+
+    function isValidChatMessage(data) {
+      return data.keys().hasAll(['id', 'patientId', 'sender', 'text'])
+        && data.id is string && data.id.size() <= 128
+        && data.patientId is string && data.patientId.size() <= 128
+        && data.sender is string
+        && data.text is string && data.text.size() <= 5000;
+    }
+
+    // Rules for Clinics
+    match /clinics/{clinicId} {
+      allow read, write: if isSignedIn();
+
+      match /pacientes/{patientId} {
+        allow read: if isSignedIn();
+        allow write, create, update: if isSignedIn() && isValidId(patientId) && isValidPatient(incoming());
+        allow delete: if isSignedIn();
+      }
+
+      match /planos/{patientId} {
+        allow read: if isSignedIn();
+        allow write, create, update: if isSignedIn() && isValidId(patientId) && isValidPlan(incoming());
+        allow delete: if isSignedIn();
+      }
+
+      match /treinos/{trainingId} {
+        allow read: if isSignedIn();
+        allow write, create, update: if isSignedIn() && isValidId(trainingId) && isValidTeachingProgram(incoming());
+        allow delete: if isSignedIn();
+      }
+
+      match /acompanhantes/{atId} {
+        allow read: if isSignedIn();
+        allow write, create, update: if isSignedIn() && isValidId(atId) && isValidAssistant(incoming());
+        allow delete: if isSignedIn();
+      }
+
+      match /atendimentos/{atendimentoId} {
+        allow read: if isSignedIn();
+        allow write, create, update: if isSignedIn() && isValidId(atendimentoId) && isValidSessionLog(incoming());
+        allow delete: if isSignedIn();
+      }
+
+      match /agenda/{eventId} {
+        allow read: if isSignedIn();
+        allow write, create, update: if isSignedIn() && isValidId(eventId) && isValidAgendaEvent(incoming());
+        allow delete: if isSignedIn();
+      }
+
+      match /documentos/{documentId} {
+        allow read: if isSignedIn();
+        allow write, create, update: if isSignedIn() && isValidId(documentId) && isValidDocument(incoming());
+        allow delete: if isSignedIn();
+      }
+
+      match /mensagens/{messageId} {
+        allow read: if isSignedIn();
+        allow write, create, update: if isSignedIn() && isValidId(messageId) && isValidChatMessage(incoming());
+        allow delete: if isSignedIn();
+      }
+
+      // Fallback for simple key-value/config collections if needed
+      match /{anyCollection}/{docId} {
+        allow read, write, create, update, delete: if isSignedIn();
+      }
+    }
+  }
+}

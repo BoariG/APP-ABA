@@ -1,0 +1,179 @@
+{
+  "entities": {
+    "Patient": {
+      "title": "Patient",
+      "description": "Patient clinic record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "dataNascimento": { "type": "string" },
+        "idade": { "type": "number" },
+        "diagnose": { "type": "string" },
+        "responsaveis": { "type": "string" },
+        "telefone": { "type": "string" },
+        "escola": { "type": "string" },
+        "observacoes": { "type": "string" },
+        "senhaPais": { "type": "string" },
+        "criadoPorProfissional": { "type": "boolean" }
+      },
+      "required": ["id", "nome", "dataNascimento"]
+    },
+    "InterventionPlan": {
+      "title": "InterventionPlan",
+      "description": "Intervention learning plan for a patient",
+      "type": "object",
+      "properties": {
+        "patientId": { "type": "string" },
+        "dataElaboracao": { "type": "string" },
+        "terapeutaResponsavel": { "type": "string" },
+        "supervisorResponsavel": { "type": "string" },
+        "objetivosGerais": { "type": "string" },
+        "objetivosEspecificos": { "type": "string" }
+      },
+      "required": ["patientId"]
+    },
+    "TeachingProgram": {
+      "title": "TeachingProgram",
+      "description": "Teaching training program with attempt tracking logs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "patientId": { "type": "string" },
+        "titulo": { "type": "string" },
+        "area": { "type": "string" },
+        "descricao": { "type": "string" },
+        "instrucoes": { "type": "string" },
+        "criterio": { "type": "string" },
+        "alvo": { "type": "string" },
+        "status": { "type": "string", "enum": ["ativo", "dominado"] },
+        "dataConclusao": { "type": "string" },
+        "tentativas": { "type": "array" },
+        "criterioProgresso": { "type": "number" }
+      },
+      "required": ["id", "patientId", "titulo"]
+    },
+    "TherapeuticAssistant": {
+      "title": "TherapeuticAssistant",
+      "description": "Professional clinic records including clinicians, therapists, assistants",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "telefone": { "type": "string" },
+        "email": { "type": "string" },
+        "observacoes": { "type": "string" },
+        "pacientesVinculados": { "type": "array" },
+        "password": { "type": "string" },
+        "cargo": { "type": "string" },
+        "status": { "type": "string", "enum": ["Ativo", "Inativo"] }
+      },
+      "required": ["id", "nome", "email"]
+    },
+    "SessionLog": {
+      "title": "SessionLog",
+      "description": "Documented therapy sessions completed by AT / Professional",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "atId": { "type": "string" },
+        "patientId": { "type": "string" },
+        "data": { "type": "string" },
+        "horario": { "type": "string" },
+        "local": { "type": "string" },
+        "descricao": { "type": "string" },
+        "comportamentosObservados": { "type": "string" },
+        "dificuldadesEncontradas": { "type": "string" },
+        "intervencoesRealizadas": { "type": "string" },
+        "orientacoesFornecidas": { "type": "string" },
+        "objetivosTrabalhados": { "type": "string" },
+        "planejamentoProximaSessao": { "type": "string" },
+        "recadoParaPais": { "type": "string" }
+      },
+      "required": ["id", "atId", "patientId", "data"]
+    },
+    "AgendaEvent": {
+      "title": "AgendaEvent",
+      "description": "Appointment dates on the shared operations agenda calendar",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "atId": { "type": "string" },
+        "patientId": { "type": "string" },
+        "data": { "type": "string" },
+        "horarioInicio": { "type": "string" },
+        "horarioFim": { "type": "string" },
+        "local": { "type": "string" },
+        "observacoes": { "type": "string" }
+      },
+      "required": ["id", "atId", "patientId", "data"]
+    },
+    "PatientDocument": {
+      "title": "PatientDocument",
+      "description": "Clinical paperwork attachments",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "patientId": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "issueDate": { "type": "string" },
+        "uploadDate": { "type": "string" },
+        "notes": { "type": "string" },
+        "base64": { "type": "string" }
+      },
+      "required": ["id", "patientId", "name", "type"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Patient communication chats",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "patientId": { "type": "string" },
+        "sender": { "type": "string", "enum": ["therapist", "parent"] },
+        "senderName": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "attachmentUrl": { "type": "string" },
+        "attachmentType": { "type": "string" },
+        "attachmentName": { "type": "string" }
+      },
+      "required": ["id", "patientId", "sender", "text"]
+    }
+  },
+  "firestore": {
+    "/clinics/{clinicId}/pacientes/{patientId}": {
+      "schema": "Patient",
+      "description": "Patients partition"
+    },
+    "/clinics/{clinicId}/planos/{patientId}": {
+      "schema": "InterventionPlan",
+      "description": "Patient PDI intervention plans"
+    },
+    "/clinics/{clinicId}/treinos/{trainingId}": {
+      "schema": "TeachingProgram",
+      "description": "Teaching programs and attempt lists"
+    },
+    "/clinics/{clinicId}/acompanhantes/{atId}": {
+      "schema": "TherapeuticAssistant",
+      "description": "Therapists list"
+    },
+    "/clinics/{clinicId}/atendimentos/{atendimentoId}": {
+      "schema": "SessionLog",
+      "description": "Session therapy logs"
+    },
+    "/clinics/{clinicId}/agenda/{eventId}": {
+      "schema": "AgendaEvent",
+      "description": "Agenda entries"
+    },
+    "/clinics/{clinicId}/documentos/{documentId}": {
+      "schema": "PatientDocument",
+      "description": "Reports and medical diagnostics base64 index"
+    },
+    "/clinics/{clinicId}/mensagens/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Interactive parent chat records"
+    }
+  }
+}
