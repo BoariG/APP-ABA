@@ -150,8 +150,8 @@ export function LoginOTP() {
                 <input
                   id="token"
                   type="text"
-                  placeholder="123456"
-                  maxLength={6}
+                  placeholder="Digite seu código"
+                  maxLength={128}
                   required
                   value={token}
                   onChange={(e) => setToken(e.target.value)}
