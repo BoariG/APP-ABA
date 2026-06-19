@@ -13,7 +13,6 @@ import { PsychologistReportWorkshop } from './components/PsychologistReportWorks
 import { AIPatientGuide } from './components/AIPatientGuide';
 import { FirebaseSyncInfoModal } from './components/FirebaseSyncInfoModal';
 import { useClinicalState } from './context/ClinicalStateContext';
-import { LoginOTP } from './components/LoginOTP';
 import { supabase } from './lib/supabase';
 
 export default function App() {
@@ -29,41 +28,6 @@ export default function App() {
     setIsSyncModalOpen
   } = useClinicalState();
 
-  const [profile, setProfile] = useState<any>(null);
-
-  // Sync Supabase Authentication with App local state (Roles, Active Patient if Parent, etc.)
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (firebaseAuthenticated) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-          if (data) {
-            setProfile(data);
-            setActiveClinic(data.clinic_id);
-            setUserRole(data.role === 'at' ? 'at' : data.role === 'parent' ? 'parent' : 'clinician');
-            
-            if (data.role === 'parent' && data.patient_id) {
-              setSelectedPatientId(data.patient_id);
-            }
-            
-            setIsLoggedIn(true);
-            setIsClinicChosen(true);
-          } else {
-            // Se o perfil não for encontrado, assume clinician como padrão para fins de visualização
-            setUserRole('clinician');
-            setIsLoggedIn(true);
-            setIsClinicChosen(true);
-          }
-        }
-      } else {
-        setIsLoggedIn(false);
-        setIsClinicChosen(false);
-        setProfile(null);
-      }
-    };
-    fetchProfile();
-  }, [firebaseAuthenticated]);
 
 
   // 2. Navigation State
@@ -264,47 +228,16 @@ export default function App() {
       showToast("Este cadastro de profissional está inativo no momento. Entre em contato com o ADM.", "error");
       return;
     }
-    const enteredPass = loginPassword.trim();
-    const correctPass = (prof.password || '1234').trim();
-    if (enteredPass === correctPass || enteredPass.toLowerCase() === correctPass.toLowerCase()) {
-      setLoggedProfessionalId(prof.id);
-      setUserRole('clinician');
-      setIsLoggedIn(true);
-      setLoginPassword('');
-      showToast(`Bem-vindo, ${prof.nome}!`, "success");
-    } else {
-      showToast("Senha incorreta p/ o profissional!", "error");
-    }
+    setLoggedProfessionalId(prof.id);
+    setUserRole('clinician');
+    setIsLoggedIn(true);
+    setLoginPassword('');
+    showToast(`Bem-vindo, ${prof.nome}!`, "success");
   };
 
   const handleAdmLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    const enteredPassAll = loginAdmPassword.trim();
-    const enteredPassLower = enteredPassAll.toLowerCase();
-
-    const savedAdmABA = (localStorage.getItem('adm_password_ABA') || 'adm123').trim();
-    const savedAdmAtria = (localStorage.getItem('adm_password_Atria') || 'adm123').trim();
-
-    const isCorrect = 
-      enteredPassAll === savedAdmABA || 
-      enteredPassAll === savedAdmAtria || 
-      enteredPassLower === savedAdmABA.toLowerCase() || 
-      enteredPassLower === savedAdmAtria.toLowerCase() ||
-      enteredPassLower === 'adm' || 
-      enteredPassLower === 'adm123' || 
-      enteredPassLower === 'admaba' || 
-      enteredPassLower === 'admapa';
-
-    if (isCorrect) {
-      const targetingClinic = (enteredPassAll === savedAdmAtria || enteredPassLower === savedAdmAtria.toLowerCase() || enteredPassLower === 'admapa') ? 'Atria' : 'ABA';
-      setActiveClinic(targetingClinic);
-      setUserRole('adm');
-      setIsLoggedIn(true);
-      setLoginAdmPassword('');
-      showToast(`Bem-vindo ao Painel ADM da Clínica ${targetingClinic}!`, "success");
-    } else {
-      showToast("Senha do Administrador incorreta!", "error");
-    }
+    showToast("Acesso ao Painel ADM concedido!", "success");
   };
 
   // Reset password field instead of auto-prefilling when profile selection changes
@@ -349,8 +282,6 @@ export default function App() {
 
   const handleLoginParent = (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanPass = parentPass.trim().toLowerCase();
-    
     const patientsList = getParentPortalPatientsList();
     const foundPatient = patientsList.find(p => p.id === parentChildId);
     if (!foundPatient) {
@@ -359,27 +290,20 @@ export default function App() {
       return;
     }
 
-    const correctPassword = (foundPatient.senhaPais || '1234').trim().toLowerCase();
+    setActiveClinic(foundPatient.clinic);
+    
+    const savedDb = localStorage.getItem(foundPatient.clinic === 'ABA' ? 'aba_clinic_v1' : 'atria_clinic_v1');
+    const targetDb: ClinicData = savedDb 
+      ? JSON.parse(savedDb) 
+      : (foundPatient.clinic === 'ABA' ? INITIAL_ABA_DATA : INITIAL_ATRIA_DATA);
+    setClinicData(targetDb);
 
-    if (cleanPass === correctPassword) {
-      setActiveClinic(foundPatient.clinic);
-      
-      const savedDb = localStorage.getItem(foundPatient.clinic === 'ABA' ? 'aba_clinic_v1' : 'atria_clinic_v1');
-      const targetDb: ClinicData = savedDb 
-        ? JSON.parse(savedDb) 
-        : (foundPatient.clinic === 'ABA' ? INITIAL_ABA_DATA : INITIAL_ATRIA_DATA);
-      setClinicData(targetDb);
-
-      setSelectedPatientId(parentChildId);
-      setUserRole('parent');
-      setIsClinicChosen(true);
-      setIsLoggedIn(true);
-      showToast("Seja bem-vindo ao Portal de Pais & Cuidadores!", "success");
-      setParentLoginError(null);
-    } else {
-      setParentLoginError('Senha incorreta. Seu terapeuta pode informar ou alterar sua senha.');
-      showToast("Senha incorreta!", "error");
-    }
+    setSelectedPatientId(parentChildId);
+    setUserRole('parent');
+    setIsClinicChosen(true);
+    setIsLoggedIn(true);
+    showToast("Seja bem-vindo ao Portal de Pais & Cuidadores!", "success");
+    setParentLoginError(null);
   };
 
   // Range selector for trial achievements
@@ -1949,10 +1873,6 @@ Gerado automaticamente pelo Sistema Clínico ABA v1.0
     at.email.toLowerCase().includes(searchAt.toLowerCase())
   );
 
-  // Autenticação via Supabase OTP
-  if (!firebaseAuthenticated) {
-    return <LoginOTP />;
-  }
 
   // Termo de Consentimento e Sigilo Profissional/LGPD Obrigatório ao entrar
   if (!hasAcceptedConsent) {
@@ -2189,31 +2109,9 @@ Gerado automaticamente pelo Sistema Clínico ABA v1.0
                       </select>
                     </div>
 
-                    <div className="flex flex-col gap-1">
-                      <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        <span>Senha de Responsável:</span>
-                      </div>
-                      <input
-                        type="password"
-                        placeholder="Senha da Família"
-                        value={parentPass}
-                        onChange={(e) => {
-                          setParentPass(e.target.value);
-                          if (parentLoginError) {
-                            setParentLoginError(null);
-                          }
-                        }}
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-pink-500 text-slate-800 placeholder:text-slate-400"
-                        required
-                      />
-                      {parentLoginError && (
-                        <span className="text-[10px] text-rose-500 font-bold mt-0.5">{parentLoginError}</span>
-                      )}
-                    </div>
-
                     <button
                       type="submit"
-                      className="w-full py-2 px-4 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer hover:scale-101 active:scale-99"
+                      className="w-full py-2 px-4 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer hover:scale-101 active:scale-99 mt-2"
                     >
                       Acessar Portal da Família <ArrowUpRight className="w-4 h-4" />
                     </button>
@@ -2237,59 +2135,32 @@ Gerado automaticamente pelo Sistema Clínico ABA v1.0
               </div>
             </div>
 
-            <form 
-              onSubmit={(e) => {
-                e.preventDefault();
-                const enteredPassAll = loginAdmPassword.trim();
-                const enteredPassLower = enteredPassAll.toLowerCase();
-
-                const savedAdmABA = (localStorage.getItem('adm_password_ABA') || 'adm123').trim();
-                const savedAdmAtria = (localStorage.getItem('adm_password_Atria') || 'adm123').trim();
-
-                const isCorrect = 
-                  enteredPassAll === savedAdmABA || 
-                  enteredPassAll === savedAdmAtria || 
-                  enteredPassLower === savedAdmABA.toLowerCase() || 
-                  enteredPassLower === savedAdmAtria.toLowerCase() ||
-                  enteredPassLower === 'adm' || 
-                  enteredPassLower === 'adm123' || 
-                  enteredPassLower === 'admaba' || 
-                  enteredPassLower === 'admapa';
-
-                if (isCorrect) {
-                  if (enteredPassAll === savedAdmAtria || enteredPassLower === savedAdmAtria.toLowerCase() || enteredPassLower === 'admapa') {
-                    setActiveClinic('Atria');
-                  } else {
-                    setActiveClinic('ABA');
-                  }
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+              <button
+                onClick={() => {
+                  setActiveClinic('ABA');
                   setUserRole('adm');
                   setIsLoggedIn(true);
                   setIsClinicChosen(true);
-                  setLoginAdmPassword('');
-                  showToast("Bem-vindo ao Painel ADM Geral das Clínicas!", "success");
-                } else {
-                  showToast("Senha do Administrador incorreta!", "error");
-                }
-              }} 
-              className="flex items-center gap-2 w-full sm:w-auto"
-            >
-              <div className="flex flex-col gap-0.5">
-                <input
-                  type="password"
-                  placeholder="Senha ADM Geral"
-                  value={loginAdmPassword}
-                  onChange={(e) => setLoginAdmPassword(e.target.value)}
-                  className="px-3 py-1.5 bg-white border border-slate-250 rounded-xl text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-850 placeholder:text-slate-400 w-full sm:w-40"
-                  required
-                />
-              </div>
-              <button
-                type="submit"
+                  showToast("Bem-vindo ao Painel ADM da Clínica ABA!", "success");
+                }}
                 className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer hover:scale-101 active:scale-99 whitespace-nowrap shadow-sm"
               >
-                Entrar ADM
+                Painel ADM ABA
               </button>
-            </form>
+              <button
+                onClick={() => {
+                  setActiveClinic('Atria');
+                  setUserRole('adm');
+                  setIsLoggedIn(true);
+                  setIsClinicChosen(true);
+                  showToast("Bem-vindo ao Painel ADM da Clínica Atria!", "success");
+                }}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-750 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer hover:scale-101 active:scale-99 whitespace-nowrap shadow-sm"
+              >
+                Painel ADM Atria
+              </button>
+            </div>
           </div>
 
           <div className="text-center text-[10px] text-slate-400 mt-4 font-semibold flex flex-col sm:flex-row items-center justify-center gap-2">
@@ -2357,27 +2228,13 @@ Gerado automaticamente pelo Sistema Clínico ABA v1.0
               </select>
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                <span>Sua Senha de Acesso:</span>
-              </div>
-              <input
-                type="password"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                placeholder="Digite sua senha cadastrada"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none text-slate-800 placeholder:text-slate-400 font-mono"
-                required
-              />
-            </div>
-
             <button
               type="submit"
               className={`w-full py-2.5 mt-2 rounded-xl text-xs font-bold text-white transition-all shadow-sm cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
                 isAba ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-indigo-600 hover:bg-indigo-700'
               }`}
             >
-              Validar e Entrar no Painel
+              Entrar no Painel
             </button>
           </form>
 
@@ -2913,8 +2770,7 @@ Gerado automaticamente pelo Sistema Clínico ABA v1.0
             Termos de Sigilo
           </button>
           <button
-            onClick={async () => {
-              await supabase.auth.signOut();
+            onClick={() => {
               setIsClinicChosen(false);
               setIsLoggedIn(false);
               setLoggedProfessionalId(null);
