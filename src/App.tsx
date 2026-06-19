@@ -170,6 +170,13 @@ export default function App() {
   const [parentLoginError, setParentLoginError] = useState<string | null>(null);
   const [isEditingPatient, setIsEditingPatient] = useState(false);
 
+  // Quick registration states for login screen
+  const [isRegisteringProf, setIsRegisteringProf] = useState(false);
+  const [regName, setRegName] = useState('');
+  const [regCargo, setRegCargo] = useState('AT');
+  const [regEmail, setRegEmail] = useState('');
+  const [regTelefone, setRegTelefone] = useState('');
+
   const getParentPortalPatientsList = () => {
     const savedAba = localStorage.getItem('aba_clinic_v1');
     const savedAtria = localStorage.getItem('atria_clinic_v1');
@@ -238,6 +245,44 @@ export default function App() {
   const handleAdmLogin = (e: React.FormEvent) => {
     e.preventDefault();
     showToast("Acesso ao Painel ADM concedido!", "success");
+  };
+
+  const handleQuickRegisterProfessional = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!regName.trim()) {
+      showToast("Nome é obrigatório!", "error");
+      return;
+    }
+
+    const newAt: TherapeuticAssistant = {
+      id: `at_${Date.now()}`,
+      nome: regName.trim(),
+      telefone: regTelefone.trim(),
+      email: regEmail.trim(),
+      observacoes: '',
+      cargo: regCargo.trim() || 'AT',
+      password: '1234',
+      status: 'Ativo',
+      pacientesVinculados: []
+    };
+
+    updateClinicData({
+      ...clinicData,
+      acompanhantes: [...clinicData.acompanhantes, newAt]
+    });
+
+    setLoggedProfessionalId(newAt.id);
+    setUserRole('clinician');
+    setIsLoggedIn(true);
+    setIsRegisteringProf(false);
+    
+    // Clear registration fields
+    setRegName('');
+    setRegCargo('AT');
+    setRegEmail('');
+    setRegTelefone('');
+
+    showToast(`Bem-vindo, ${newAt.nome}! Seu cadastro foi realizado com sucesso.`, "success");
   };
 
   // Reset password field instead of auto-prefilling when profile selection changes
@@ -2209,34 +2254,114 @@ Gerado automaticamente pelo Sistema Clínico ABA v1.0
             </p>
           </div>
 
-          {/* Professional Login Form Only */}
-          <form onSubmit={handleProfessionalLogin} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Qual profissional você é?</label>
-              <select
-                value={loginSelectedProfId}
-                onChange={(e) => setLoginSelectedProfId(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 cursor-pointer"
-                required
-              >
-                <option value="">-- Selecione o seu nome --</option>
-                {(clinicData.acompanhantes || []).map(at => (
-                  <option key={at.id} value={at.id}>
-                    {at.nome} ({at.cargo || 'Profissional'}) {at.status === 'Inativo' ? '● (Inativo)' : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Professional Login / Quick Registration Form */}
+          {isRegisteringProf ? (
+            <form onSubmit={handleQuickRegisterProfessional} className="flex flex-col gap-4 animate-in fade-in duration-200">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nome Completo</label>
+                <input
+                  type="text"
+                  placeholder="Nome do Profissional"
+                  value={regName}
+                  onChange={(e) => setRegName(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none text-slate-800"
+                  required
+                />
+              </div>
 
-            <button
-              type="submit"
-              className={`w-full py-2.5 mt-2 rounded-xl text-xs font-bold text-white transition-all shadow-sm cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
-                isAba ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-indigo-600 hover:bg-indigo-700'
-              }`}
-            >
-              Entrar no Painel
-            </button>
-          </form>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cargo / Função</label>
+                <select
+                  value={regCargo}
+                  onChange={(e) => setRegCargo(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none text-slate-800 cursor-pointer"
+                >
+                  <option value="AT">Acompanhante Terapêutico (AT)</option>
+                  <option value="Psicólogo">Psicólogo</option>
+                  <option value="Supervisor">Supervisor / BCBA</option>
+                  <option value="Terapeuta Ocupacional">Terapeuta Ocupacional</option>
+                  <option value="Fonoaudiólogo">Fonoaudiólogo</option>
+                  <option value="Outro">Outro</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">E-mail (opcional)</label>
+                  <input
+                    type="email"
+                    placeholder="email@exemplo.com"
+                    value={regEmail}
+                    onChange={(e) => setRegEmail(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none text-slate-800"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Telefone (opcional)</label>
+                  <input
+                    type="text"
+                    placeholder="(99) 99999-9999"
+                    value={regTelefone}
+                    onChange={(e) => setRegTelefone(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none text-slate-800"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className={`w-full py-2.5 mt-2 rounded-xl text-xs font-bold text-white transition-all shadow-sm cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
+                  isAba ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-indigo-600 hover:bg-indigo-700'
+                }`}
+              >
+                Cadastrar e Entrar no Painel
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsRegisteringProf(false)}
+                className="text-center text-xs text-slate-400 hover:text-slate-600 font-semibold cursor-pointer underline -mt-1"
+              >
+                Voltar para Seleção de Perfil
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleProfessionalLogin} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Qual profissional você é?</label>
+                <select
+                  value={loginSelectedProfId}
+                  onChange={(e) => setLoginSelectedProfId(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 cursor-pointer"
+                  required
+                >
+                  <option value="">-- Selecione o seu nome --</option>
+                  {(clinicData.acompanhantes || []).map(at => (
+                    <option key={at.id} value={at.id}>
+                      {at.nome} ({at.cargo || 'Profissional'}) {at.status === 'Inativo' ? '● (Inativo)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                className={`w-full py-2.5 mt-2 rounded-xl text-xs font-bold text-white transition-all shadow-sm cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
+                  isAba ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-indigo-600 hover:bg-indigo-700'
+                }`}
+              >
+                Entrar no Painel
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsRegisteringProf(true)}
+                className="text-center text-xs text-indigo-500 hover:text-indigo-650 font-bold cursor-pointer hover:underline -mt-1 animate-pulse"
+              >
+                Não está na lista? Cadastrar Novo Profissional
+              </button>
+            </form>
+          )}
 
           <div className="text-center text-[10px] text-slate-400 font-semibold border-t border-slate-100 pt-3">
             Sessão segura criptografada em Sandbox Local.
