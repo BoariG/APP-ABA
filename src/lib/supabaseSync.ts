@@ -336,9 +336,6 @@ async function loadAllData(
   activeClinic: string,
   onUpdate: (updater: (prev: ClinicData) => ClinicData) => void
 ) {
-  const userResponse = await supabase.auth.getUser();
-  if (!userResponse.data.user) return;
-
   try {
     const [
       { data: pts },

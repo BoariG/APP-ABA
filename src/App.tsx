@@ -25,7 +25,8 @@ export default function App() {
     firebaseAuthenticated,
     authChecked,
     isSyncModalOpen,
-    setIsSyncModalOpen
+    setIsSyncModalOpen,
+    connectionError
   } = useClinicalState();
 
 
@@ -7305,6 +7306,7 @@ Terapeuta Responsável: Dra. Aline Mendes - CREFITO-3/27084-TO / CRP 06/12345`;
         firebaseAuthenticated={firebaseAuthenticated}
         clinicData={clinicData}
         projectId="gfyjwrhuuqbefedkzxlt"
+        connectionError={connectionError}
       />
     </div>
   );

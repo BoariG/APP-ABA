@@ -14,6 +14,7 @@ interface ClinicalStateContextProps {
   authChecked: boolean;
   isSyncModalOpen: boolean;
   setIsSyncModalOpen: (open: boolean) => void;
+  connectionError: string | null;
 }
 
 const ClinicalStateContext = createContext<ClinicalStateContextProps | undefined>(undefined);
@@ -27,6 +28,7 @@ export function ClinicalStateProvider({ children }: { children: React.ReactNode 
   const [firebaseAuthenticated, setFirebaseAuthenticated] = useState<boolean>(false);
   const [authChecked, setAuthChecked] = useState<boolean>(false);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState<boolean>(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const [clinicData, setClinicData] = useState<ClinicData>(() => {
     // Try to load from localStorage first for zero-latency, offline-first loading
@@ -41,19 +43,81 @@ export function ClinicalStateProvider({ children }: { children: React.ReactNode 
     return activeClinic === 'ABA' ? { ...INITIAL_ABA_DATA } : { ...INITIAL_ATRIA_DATA };
   });
 
-  // Track the authentication state of the Supabase Client
+  // Track the connectivity and authentication state of the Supabase Client
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setFirebaseAuthenticated(!!session);
-      setAuthChecked(true);
-    });
+    let active = true;
+    
+    const checkConnection = async () => {
+      try {
+        // Query a row to check if we can reach the database (since RLS is disabled, this is the most reliable check)
+        const { error } = await supabase.from('patients').select('id').limit(1);
+        if (!error) {
+          if (active) {
+            setFirebaseAuthenticated(true);
+            setConnectionError(null);
+          }
+        } else {
+          let errDetail = error.message;
+          // Fallback to check active session or sign in anonymously
+          const { data: { session }, error: sessionErr } = await supabase.auth.getSession();
+          if (sessionErr) errDetail += " | getSession: " + sessionErr.message;
+          if (session) {
+            if (active) {
+              setFirebaseAuthenticated(true);
+              setConnectionError(null);
+            }
+          } else {
+            const { error: signInError } = await supabase.auth.signInAnonymously();
+            if (signInError) {
+              errDetail += " | signInAnon: " + signInError.message;
+              if (active) {
+                setFirebaseAuthenticated(false);
+                setConnectionError(errDetail);
+              }
+            } else {
+              if (active) {
+                setFirebaseAuthenticated(true);
+                setConnectionError(null);
+              }
+            }
+          }
+        }
+      } catch (err: any) {
+        if (active) {
+          setFirebaseAuthenticated(false);
+          setConnectionError(err?.message || String(err));
+        }
+      } finally {
+        if (active) setAuthChecked(true);
+      }
+    };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setFirebaseAuthenticated(!!session);
-      setAuthChecked(true);
+    checkConnection();
+
+    // Still listen to auth state changes to stay in sync if session changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session) {
+        if (active) {
+          setFirebaseAuthenticated(true);
+          setConnectionError(null);
+        }
+      } else {
+        // If logged out, recheck if we can still query anonymously
+        const { error } = await supabase.from('patients').select('id').limit(1);
+        if (active) {
+          setFirebaseAuthenticated(!error);
+          if (error) {
+            setConnectionError("AuthChange Logout - Query error: " + error.message);
+          } else {
+            setConnectionError(null);
+          }
+        }
+      }
+      if (active) setAuthChecked(true);
     });
 
     return () => {
+      active = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -118,7 +182,8 @@ export function ClinicalStateProvider({ children }: { children: React.ReactNode 
       firebaseAuthenticated,
       authChecked,
       isSyncModalOpen,
-      setIsSyncModalOpen
+      setIsSyncModalOpen,
+      connectionError
     }}>
       {children}
     </ClinicalStateContext.Provider>

@@ -21,6 +21,7 @@ interface FirebaseSyncInfoModalProps {
   firebaseAuthenticated: boolean;
   clinicData: ClinicData;
   projectId: string;
+  connectionError?: string | null;
 }
 
 export function FirebaseSyncInfoModal({
@@ -29,7 +30,8 @@ export function FirebaseSyncInfoModal({
   activeClinic,
   firebaseAuthenticated,
   clinicData,
-  projectId
+  projectId,
+  connectionError
 }: FirebaseSyncInfoModalProps) {
   const [copied, setCopied] = useState(false);
 
@@ -124,18 +126,32 @@ export function FirebaseSyncInfoModal({
                 </div>
               </div>
             ) : (
-              <div className="p-3 bg-amber-50/75 border border-amber-100 rounded-xl flex items-start gap-3">
-                <div className="p-2 bg-amber-500 text-white rounded-xl shadow-xs mt-0.5">
-                  <WifiOff className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-amber-950">Modo Offline / Sem Nuvem Ativo</span>
-                    <span className="text-[9px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-extrabold uppercase">BANDA LOCAL</span>
+              <div className="p-3 bg-amber-50/75 border border-amber-100 rounded-xl flex flex-col gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-amber-500 text-white rounded-xl shadow-xs mt-0.5">
+                    <WifiOff className="w-4 h-4" />
                   </div>
-                  <p className="text-[10px] text-amber-800 leading-relaxed mt-1">
-                    Sua base está local neste navegador. Para que os dados apareçam em <strong>outros dispositivos em tempo real</strong>, você precisa habilitar o provedor de autenticação no seu Console do Supabase.
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-amber-950">Modo Offline / Sem Nuvem Ativo</span>
+                      <span className="text-[9px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-extrabold uppercase">BANDA LOCAL</span>
+                    </div>
+                    <p className="text-[10px] text-amber-800 leading-relaxed mt-1">
+                      Sua base está local neste navegador. Para que os dados apareçam em <strong>outros dispositivos em tempo real</strong>, você precisa habilitar o provedor de autenticação no seu Console do Supabase.
+                    </p>
+                  </div>
+                </div>
+                {connectionError && (
+                  <div className="p-2.5 bg-amber-100/50 rounded-lg text-[9px] font-mono text-amber-900 border border-amber-250 select-text break-all">
+                    <strong className="block mb-0.5">Detalhes do erro retornado pelo banco:</strong>
+                    {connectionError}
+                  </div>
+                )}
+                <div className="p-2.5 bg-white/80 rounded-lg text-[9px] text-slate-650 border border-slate-200/50 leading-relaxed space-y-1">
+                  <span className="font-bold text-slate-800 block">Dicas de Sincronismo Mobile (Android/iOS):</span>
+                  <p>• Se o computador estiver sincronizado mas o celular continuar offline, o celular pode estar rodando uma versão antiga em cache.</p>
+                  <p>• **No iOS (Safari):** Vá em Ajustes &gt; Safari &gt; Avançado &gt; Dados dos Sites. Pesquise por `onrender.com` e exclua, depois reabra a página.</p>
+                  <p>• **No Android (Chrome):** Toque no cadeado ao lado da URL &gt; Configurações do site &gt; Limpar dados e redefinir. Recarregue a página.</p>
                 </div>
               </div>
             )}
