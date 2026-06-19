@@ -11,3 +11,18 @@ createRoot(document.getElementById('root')!).render(
     </ClinicalStateProvider>
   </StrictMode>,
 );
+
+// Clear any old/broken PWA Service Workers to force immediate refresh of assets and Supabase connections
+if ('serviceWorker' in navigator && !localStorage.getItem('pwa_purged_v1')) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    if (registrations.length > 0) {
+      for (const registration of registrations) {
+        registration.unregister();
+      }
+      localStorage.setItem('pwa_purged_v1', 'true');
+      window.location.reload();
+    } else {
+      localStorage.setItem('pwa_purged_v1', 'true');
+    }
+  });
+}

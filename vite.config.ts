@@ -40,12 +40,7 @@ export default defineConfig(() => {
           runtimeCaching: [
             {
               urlPattern: ({ url }) => url.hostname.includes('supabase.co'),
-              handler: 'NetworkOnly',
-              options: {
-                backgroundSync: {
-                  name: 'supabaseQueue' // Optional queueing but ensures no cache interception
-                }
-              }
+              handler: 'NetworkOnly'
             },
             {
               urlPattern: /\.(?:js|css|html|ico|png|jpg|jpeg|svg|gif|woff2?)$/,
