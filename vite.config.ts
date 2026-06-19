@@ -10,7 +10,7 @@ export default defineConfig(() => {
       react(),
       tailwindcss(),
       VitePWA({
-        registerType: 'prompt',
+        registerType: 'autoUpdate',
         manifest: {
           name: 'Clinic ABA & Atria',
           short_name: 'ClinicABA',
