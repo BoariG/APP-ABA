@@ -74,24 +74,20 @@ export function ClinicalStateProvider({ children }: { children: React.ReactNode 
     }
     setClinicData(base);
 
-    // Setup bidirectional real-time listeners ONLY if authenticated
-    if (firebaseAuthenticated) {
-      console.log(`Setting up real-time synchronized listeners for clinic: ${activeClinic}`);
-      const unsubscribe = setupRealtimeListeners(activeClinic, (updater) => {
-        setClinicData((prev) => {
-          const next = updater(prev);
-          // Sync changes down to localStorage to maintain a fallback
-          localStorage.setItem(activeClinic === 'ABA' ? 'aba_clinic_v1' : 'atria_clinic_v1', JSON.stringify(next));
-          return next;
-        });
+    // Setup bidirectional real-time listeners always (using public anon key access)
+    console.log(`Setting up real-time synchronized listeners for clinic: ${activeClinic}`);
+    const unsubscribe = setupRealtimeListeners(activeClinic, (updater) => {
+      setClinicData((prev) => {
+        const next = updater(prev);
+        // Sync changes down to localStorage to maintain a fallback
+        localStorage.setItem(activeClinic === 'ABA' ? 'aba_clinic_v1' : 'atria_clinic_v1', JSON.stringify(next));
+        return next;
       });
+    });
 
-      return () => {
-        unsubscribe();
-      };
-    } else {
-      console.log(`Supabase not authenticated. Operating in secure offline fallback (local storage).`);
-    }
+    return () => {
+      unsubscribe();
+    };
   }, [activeClinic, firebaseAuthenticated]);
 
   const updateClinicData = (newData: ClinicData) => {

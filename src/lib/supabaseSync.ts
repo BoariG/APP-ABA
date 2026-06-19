@@ -617,8 +617,6 @@ export async function syncLocalStateToSupabase(
   newState: ClinicData
 ) {
   if (isSyncingFromSupabase) return;
-  const sessionResponse = await supabase.auth.getSession();
-  if (!sessionResponse.data.session) return; // Só tenta sincronizar com token ativo
 
   // 1. Sync Patients
   const ptsToSet = getListDiffToSet(oldState.pacientes || [], newState.pacientes || [], p => p.id);
